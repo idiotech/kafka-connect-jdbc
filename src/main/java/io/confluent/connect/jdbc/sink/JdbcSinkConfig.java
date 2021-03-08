@@ -238,6 +238,10 @@ public class JdbcSinkConfig extends AbstractConfig {
 
   private static final EnumRecommender QUOTE_METHOD_RECOMMENDER =
       EnumRecommender.in(QuoteMethod.values());
+  public static final String ENUM_SETS = "enum.sets";
+  private static final String ENUM_SETS_DEFAULT = "";
+  private static final String ENUM_SETS_DOC = "fields that are MySQL enum sets";
+  private static final String ENUM_SETS_DISPLAY = "Enum sets";
 
   private static final EnumRecommender TABLE_TYPES_RECOMMENDER =
       EnumRecommender.in(TableType.values());
@@ -450,7 +454,18 @@ public class JdbcSinkConfig extends AbstractConfig {
             2,
             ConfigDef.Width.SHORT,
             RETRY_BACKOFF_MS_DISPLAY
-        );
+        )
+        .define(
+          ENUM_SETS,
+          ConfigDef.Type.LIST,
+          ENUM_SETS_DEFAULT,
+          ConfigDef.Importance.MEDIUM,
+          ENUM_SETS_DOC,
+          DATAMAPPING_GROUP,
+          5,
+          ConfigDef.Width.SHORT,
+          ENUM_SETS_DISPLAY
+          );
 
   public final String connectorName;
   public final String connectionUrl;
@@ -466,6 +481,7 @@ public class JdbcSinkConfig extends AbstractConfig {
   public final InsertMode insertMode;
   public final PrimaryKeyMode pkMode;
   public final List<String> pkFields;
+  public final List<String> enumSets;
   public final Set<String> fieldsWhitelist;
   public final String dialectName;
   public final TimeZone timeZone;
@@ -487,6 +503,7 @@ public class JdbcSinkConfig extends AbstractConfig {
     insertMode = InsertMode.valueOf(getString(INSERT_MODE).toUpperCase());
     pkMode = PrimaryKeyMode.valueOf(getString(PK_MODE).toUpperCase());
     pkFields = getList(PK_FIELDS);
+    enumSets = getList(ENUM_SETS);
     dialectName = getString(DIALECT_NAME_CONFIG);
     fieldsWhitelist = new HashSet<>(getList(FIELDS_WHITELIST));
     String dbTimeZone = getString(DB_TIMEZONE_CONFIG);

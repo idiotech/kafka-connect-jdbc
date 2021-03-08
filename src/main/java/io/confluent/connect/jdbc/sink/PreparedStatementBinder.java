@@ -15,14 +15,15 @@
 
 package io.confluent.connect.jdbc.sink;
 
-import org.apache.kafka.connect.data.Field;
-import org.apache.kafka.connect.data.Schema;
-import org.apache.kafka.connect.data.Struct;
+import io.confluent.connect.jdbc.dialect.GenericDatabaseDialect;
+import org.apache.kafka.connect.data.*;
 import org.apache.kafka.connect.errors.ConnectException;
 import org.apache.kafka.connect.sink.SinkRecord;
 
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
+import java.util.HashSet;
+import java.util.Set;
 
 import io.confluent.connect.jdbc.dialect.DatabaseDialect;
 import io.confluent.connect.jdbc.dialect.DatabaseDialect.StatementBinder;
@@ -39,6 +40,9 @@ public class PreparedStatementBinder implements StatementBinder {
   private final FieldsMetadata fieldsMetadata;
   private final JdbcSinkConfig.InsertMode insertMode;
   private final DatabaseDialect dialect;
+  private final Set<String> enumSets;
+  private final Schema enumSetSchema = SchemaBuilder.array(Schema.STRING_SCHEMA)
+          .parameter("isEnumSet", "true").build();
 
   public PreparedStatementBinder(
       DatabaseDialect dialect,
@@ -54,12 +58,23 @@ public class PreparedStatementBinder implements StatementBinder {
     this.schemaPair = schemaPair;
     this.fieldsMetadata = fieldsMetadata;
     this.insertMode = insertMode;
+    if (dialect instanceof GenericDatabaseDialect) {
+      GenericDatabaseDialect gdialect = (GenericDatabaseDialect) dialect;
+      if (gdialect.config instanceof JdbcSinkConfig) {
+        JdbcSinkConfig sinkConfig = (JdbcSinkConfig) gdialect.config;
+        enumSets = new HashSet<>(sinkConfig.enumSets);
+      } else {
+        enumSets = new HashSet<>();
+      }
+    } else {
+      enumSets = new HashSet<>();
+    }
   }
 
   @Override
   public void bindRecord(SinkRecord record) throws SQLException {
     final Struct valueStruct = (Struct) record.value();
-    final boolean isDelete = isNull(valueStruct);
+    boolean isDelete = isNull(valueStruct);
     // Assumption: the relevant SQL has placeholders for keyFieldNames first followed by
     //             nonKeyFieldNames, in iteration order for all INSERT/ UPSERT queries
     //             the relevant SQL has placeholders for keyFieldNames,
@@ -68,6 +83,12 @@ public class PreparedStatementBinder implements StatementBinder {
     //             keyFieldNames, in iteration order for all UPDATE queries
 
     int index = 1;
+    if (!isDelete) {
+      Field field = record.valueSchema().field("deleted");
+      if (field != null && field.schema().type() == Schema.Type.BOOLEAN) {
+        isDelete = valueStruct.getBoolean("deleted");
+      }
+    }
     if (isDelete) {
       bindKeyFields(record, index);
     } else {
@@ -140,6 +161,12 @@ public class PreparedStatementBinder implements StatementBinder {
   ) throws SQLException {
     for (final String fieldName : fieldsMetadata.nonKeyFieldNames) {
       final Field field = record.valueSchema().field(fieldName);
+      Schema schema;
+      if (enumSets.contains(fieldName)) {
+        schema = enumSetSchema;
+      } else {
+        schema = field.schema();
+      }
       bindField(index++, field.schema(), valueStruct.get(field));
     }
     return index;

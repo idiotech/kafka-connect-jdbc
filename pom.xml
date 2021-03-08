@@ -77,6 +77,11 @@
 
     <dependencies>
         <dependency>
+            <groupId>com.datamountaineer</groupId>
+            <artifactId>kafka-connect-common</artifactId>
+            <version>1.1.6</version>
+        </dependency>
+        <dependency>
             <groupId>org.apache.kafka</groupId>
             <artifactId>connect-api</artifactId>
             <scope>provided</scope>

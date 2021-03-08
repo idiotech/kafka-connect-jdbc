@@ -484,21 +484,21 @@ public abstract class BaseDialectTest<T extends GenericDatabaseDialect> {
     }
   }
 
-  @Test(expected = ConnectException.class)
-  public void bindFieldStructUnsupported() throws SQLException {
-    Schema structSchema = SchemaBuilder.struct().field("test", Schema.BOOLEAN_SCHEMA).build();
-    ColumnDefinition colDef = mock(ColumnDefinition.class);
-    when(colDef.type()).thenReturn(Types.BOOLEAN);
-    dialect.bindField(mock(PreparedStatement.class), 1, structSchema, new Struct(structSchema), colDef);
-  }
+//  @Test(expected = ConnectException.class)
+//  public void bindFieldStructUnsupported() throws SQLException {
+//    Schema structSchema = SchemaBuilder.struct().field("test", Schema.BOOLEAN_SCHEMA).build();
+//    ColumnDefinition colDef = mock(ColumnDefinition.class);
+//    when(colDef.type()).thenReturn(Types.BOOLEAN);
+//    dialect.bindField(mock(PreparedStatement.class), 1, structSchema, new Struct(structSchema), colDef);
+//  }
 
-  @Test(expected = ConnectException.class)
-  public void bindFieldArrayUnsupported() throws SQLException {
-    Schema arraySchema = SchemaBuilder.array(Schema.INT8_SCHEMA);
-    ColumnDefinition colDef = mock(ColumnDefinition.class);
-    when(colDef.type()).thenReturn(Types.ARRAY);
-    dialect.bindField(mock(PreparedStatement.class), 1, arraySchema, Collections.emptyList(), colDef);
-  }
+//  @Test(expected = ConnectException.class)
+//  public void bindFieldArrayUnsupported() throws SQLException {
+//    Schema arraySchema = SchemaBuilder.array(Schema.INT8_SCHEMA);
+//    ColumnDefinition colDef = mock(ColumnDefinition.class);
+//    when(colDef.type()).thenReturn(Types.ARRAY);
+//    dialect.bindField(mock(PreparedStatement.class), 1, arraySchema, Collections.emptyList(), colDef);
+//  }
 
   @Test(expected = ConnectException.class)
   public void bindFieldMapUnsupported() throws SQLException {

@@ -17,6 +17,7 @@ package io.confluent.connect.jdbc.dialect;
 
 import java.time.ZoneOffset;
 import java.util.TimeZone;
+import com.datamountaineer.streamreactor.connect.json.SimpleJsonConverter;
 import org.apache.kafka.common.config.AbstractConfig;
 import org.apache.kafka.common.config.types.Password;
 import org.apache.kafka.connect.data.Date;
@@ -129,7 +130,7 @@ public class GenericDatabaseDialect implements DatabaseDialect {
   // existing dialects that may rely on it.
   @Deprecated
   protected final Logger log = LoggerFactory.getLogger(GenericDatabaseDialect.class);
-  protected final AbstractConfig config;
+  public final AbstractConfig config;
 
   /**
    * Whether to map {@code NUMERIC} JDBC types by precision.
@@ -147,6 +148,7 @@ public class GenericDatabaseDialect implements DatabaseDialect {
   private volatile JdbcDriverInfo jdbcDriverInfo;
   private final int batchMaxRows;
   private final TimeZone timeZone;
+  private final SimpleJsonConverter jsonConverter = new SimpleJsonConverter();
 
   /**
    * Create a new dialect instance with the given connector configuration.
@@ -1575,6 +1577,9 @@ public class GenericDatabaseDialect implements DatabaseDialect {
         bound = maybeBindPrimitive(statement, index, schema, value);
       }
       if (!bound) {
+        bound = maybeBindComplex(statement, index, schema, value);
+      }
+      if (!bound) {
         throw new ConnectException("Unsupported source data type: " + schema.type());
       }
     }
@@ -1633,6 +1638,38 @@ public class GenericDatabaseDialect implements DatabaseDialect {
           bytes = (byte[]) value;
         }
         statement.setBytes(index, bytes);
+        break;
+      default:
+        return false;
+    }
+    return true;
+  }
+
+
+  protected boolean maybeBindComplex(
+          PreparedStatement statement,
+          int index,
+          Schema schema,
+          Object value
+  ) throws SQLException {
+    System.err.println(statement);
+    System.err.println(schema.defaultValue() + " " + schema.doc() + " " +  schema.parameters());
+    switch (schema.type()) {
+      case STRUCT:
+        statement.setString(index, jsonConverter.fromConnectData(schema, value).toString());
+        break;
+      case ARRAY:
+        String str =
+                jsonConverter.fromConnectData(schema, value).toString();
+        if (schema.parameters() != null && schema.parameters().containsKey("isEnumSet")) {
+          str = str
+                  .replace("[", "")
+                  .replace("]", "")
+                  .replace("\"", "");
+        }
+          statement.setString(
+                  index, str
+          );
         break;
       default:
         return false;
@@ -1847,6 +1884,8 @@ public class GenericDatabaseDialect implements DatabaseDialect {
         builder.append((Boolean) value ? '1' : '0');
         break;
       case STRING:
+      case ARRAY:
+      case STRUCT:
         builder.appendStringQuoted(value);
         break;
       case BYTES:

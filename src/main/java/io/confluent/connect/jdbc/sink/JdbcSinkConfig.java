@@ -120,6 +120,13 @@ public class JdbcSinkConfig extends AbstractConfig {
       + "to be ``record_key``.";
   private static final String DELETE_ENABLED_DISPLAY = "Enable deletes";
 
+  public static final String DELETE_BY_FIELD = "delete.by.field";
+  private static final String DELETE_BY_FIELD_DEFAULT = "false";
+  private static final String DELETE_BY_FIELD_DOC =
+          "Whether to treat values with a boolean `deleted` field set to true as deletes. Requires ``pk.mode`` "
+                  + "to be ``record_key``.";
+  private static final String DELETE_BY_FIELD_DISPLAY = "Enable deletes by field";
+
   public static final String AUTO_CREATE = "auto.create";
   private static final String AUTO_CREATE_DEFAULT = "false";
   private static final String AUTO_CREATE_DOC =
@@ -330,6 +337,17 @@ public class JdbcSinkConfig extends AbstractConfig {
             DeleteEnabledRecommender.INSTANCE
         )
         .define(
+            DELETE_BY_FIELD,
+            ConfigDef.Type.BOOLEAN,
+            DELETE_BY_FIELD_DEFAULT,
+            ConfigDef.Importance.MEDIUM,
+            DELETE_BY_FIELD_DOC, WRITES_GROUP,
+            3,
+            ConfigDef.Width.SHORT,
+            DELETE_BY_FIELD_DISPLAY,
+            DeleteEnabledRecommender.INSTANCE
+        )
+        .define(
             TABLE_TYPES_CONFIG,
             ConfigDef.Type.LIST,
             TABLE_TYPES_DEFAULT,
@@ -474,6 +492,7 @@ public class JdbcSinkConfig extends AbstractConfig {
   public final String tableNameFormat;
   public final int batchSize;
   public final boolean deleteEnabled;
+  public final boolean deleteByField;
   public final int maxRetries;
   public final int retryBackoffMs;
   public final boolean autoCreate;
@@ -496,6 +515,7 @@ public class JdbcSinkConfig extends AbstractConfig {
     tableNameFormat = getString(TABLE_NAME_FORMAT).trim();
     batchSize = getInt(BATCH_SIZE);
     deleteEnabled = getBoolean(DELETE_ENABLED);
+    deleteByField = getBoolean(DELETE_BY_FIELD);
     maxRetries = getInt(MAX_RETRIES);
     retryBackoffMs = getInt(RETRY_BACKOFF_MS);
     autoCreate = getBoolean(AUTO_CREATE);

@@ -43,6 +43,7 @@ public class PreparedStatementBinder implements StatementBinder {
   private final Set<String> enumSets;
   private final Schema enumSetSchema = SchemaBuilder.array(Schema.STRING_SCHEMA)
           .parameter("isEnumSet", "true").build();
+  private final JdbcSinkConfig config;
 
   public PreparedStatementBinder(
       DatabaseDialect dialect,
@@ -61,12 +62,14 @@ public class PreparedStatementBinder implements StatementBinder {
     if (dialect instanceof GenericDatabaseDialect) {
       GenericDatabaseDialect gdialect = (GenericDatabaseDialect) dialect;
       if (gdialect.config instanceof JdbcSinkConfig) {
-        JdbcSinkConfig sinkConfig = (JdbcSinkConfig) gdialect.config;
-        enumSets = new HashSet<>(sinkConfig.enumSets);
+        config = (JdbcSinkConfig) gdialect.config;
+        enumSets = new HashSet<>(config.enumSets);
       } else {
+        config = null;
         enumSets = new HashSet<>();
       }
     } else {
+      config = null;
       enumSets = new HashSet<>();
     }
   }
@@ -83,7 +86,7 @@ public class PreparedStatementBinder implements StatementBinder {
     //             keyFieldNames, in iteration order for all UPDATE queries
 
     int index = 1;
-    if (!isDelete) {
+    if (!isDelete && config != null && config.deleteByField) {
       Field field = record.valueSchema().field("deleted");
       if (field != null && field.schema().type() == Schema.Type.BOOLEAN) {
         isDelete = valueStruct.getBoolean("deleted");

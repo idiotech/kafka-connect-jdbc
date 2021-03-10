@@ -15,7 +15,9 @@
 
 package io.confluent.connect.jdbc.sink;
 
+import org.apache.kafka.connect.data.Field;
 import org.apache.kafka.connect.data.Schema;
+import org.apache.kafka.connect.data.Struct;
 import org.apache.kafka.connect.errors.ConnectException;
 import org.apache.kafka.connect.sink.SinkRecord;
 import org.slf4j.Logger;
@@ -175,8 +177,18 @@ public class BufferedRecords {
       return new ArrayList<>();
     }
     log.debug("Flushing {} buffered records", records.size());
+
     for (SinkRecord record : records) {
-      if (isNull(record.value()) && nonNull(deleteStatementBinder)) {
+      boolean nullValue = isNull(record.value());
+      boolean isDelete = nullValue && nonNull(deleteStatementBinder);
+      if (!isDelete && !nullValue && config.deleteByField) {
+        Field field = record.valueSchema().field("deleted");
+        Struct valueStruct = (Struct) record.value();
+        if (field != null && field.schema().type() == Schema.Type.BOOLEAN) {
+          isDelete = valueStruct.getBoolean("deleted");
+        }
+      }
+      if (isDelete) {
         deleteStatementBinder.bindRecord(record);
       } else {
         updateStatementBinder.bindRecord(record);
